@@ -11,8 +11,9 @@
 #import <FBSDKCoreKit/FBSDKCoreKit.h>
 #import <FBSDKLoginKit/FBSDKLoginKit.h>
 #import <FBSDKShareKit/FBSDKShareKit.h>
+#import <AssetsLibrary/AssetsLibrary.h>
 
-@interface ViewController ()
+@interface ViewController ()<FBSDKSharingDelegate>
 
 @end
 
@@ -20,8 +21,12 @@
 NSURL *videoURL;
 - (void)viewDidLoad {
     [super viewDidLoad];
+    NSString *fullPath = [[NSBundle mainBundle] pathForResource:@"clip3" ofType:@"mp4"];
+    videoURL =[NSURL fileURLWithPath:fullPath];
+    [self saveToCameraRoll:videoURL];
     // Do any additional setup after loading the view, typically from a nib.
 }
+
 
 
 - (void)didReceiveMemoryWarning {
@@ -84,16 +89,58 @@ NSURL *videoURL;
     content.photos = @[photo];
     [FBSDKShareDialog showFromViewController:self
                                  withContent:content
-                                    delegate:nil];
+                                    delegate:self];
 }
 - (void) shareVideoOnFacebook {
-    NSString *fullPath = [[NSBundle mainBundle] pathForResource:@"clip3" ofType:@"mp4"];
-    videoURL =[NSURL fileURLWithPath:fullPath];
+//    FBSDKShareDialog *shareDialog = [[FBSDKShareDialog alloc] init];
+//    NSURL *videoUrl = videoURL;
+//    FBSDKShareVideo *video = [[FBSDKShareVideo alloc] init];
+//    video.videoURL = videoUrl;
+//    FBSDKShareVideoContent *content = [[FBSDKShareVideoContent alloc] init];
+//    content.video = video;
+//    shareDialog.shareContent = content;
+//    shareDialog.delegate = self;
+//    shareDialog.fromViewController = self;
+//    [shareDialog show];
+    
     FBSDKShareVideo *video = [[FBSDKShareVideo alloc] init];
     video.videoURL = videoURL;
     FBSDKShareVideoContent *content = [[FBSDKShareVideoContent alloc] init];
     content.video = video;
-    [FBSDKShareDialog showFromViewController:self withContent:content delegate:nil];
+    [FBSDKShareDialog showFromViewController:self withContent:content delegate:self];
+}
+- (void)saveToCameraRoll:(NSURL *)srcURL
+{
+    NSLog(@"srcURL: %@", srcURL);
+    
+    ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
+    ALAssetsLibraryWriteVideoCompletionBlock videoWriteCompletionBlock =
+    ^(NSURL *newURL, NSError *error) {
+        if (error) {
+            NSLog( @"Error writing image with metadata to Photo Library: %@", error );
+        } else {
+            NSLog( @"Wrote image with metadata to Photo Library %@", newURL.absoluteString);
+            videoURL  = newURL;
+        }
+    };
+    
+    if ([library videoAtPathIsCompatibleWithSavedPhotosAlbum:srcURL])
+    {
+        [library writeVideoAtPathToSavedPhotosAlbum:srcURL
+                                    completionBlock:videoWriteCompletionBlock];
+    }
+}
+
+- (void)sharer:(id<FBSDKSharing>)sharer didCompleteWithResults:(NSDictionary *)results {
+     NSLog(@"CompleteWithResults");
+}
+
+- (void)sharer:(id<FBSDKSharing>)sharer didFailWithError:(NSError *)error {
+    NSLog(@"%@",error);
+}
+
+- (void)sharerDidCancel:(id<FBSDKSharing>)sharer {
+         NSLog(@"sharerDidCancel");
 }
 
 
